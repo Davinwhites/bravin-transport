@@ -11,7 +11,7 @@ echo.
 where python >nul 2>nul
 if %errorlevel% equ 0 (
     echo [OK] Python detected. Starting server on http://localhost:8000...
-    start "" "http://localhost:8000/bravin-transport.html"
+    start "" "http://localhost:8000/index.html"
     python -m http.server 8000
     goto end
 )
@@ -20,7 +20,7 @@ if %errorlevel% equ 0 (
 where npx >nul 2>nul
 if %errorlevel% equ 0 (
     echo [OK] Node/npx detected. Starting server on http://localhost:8080...
-    start "" "http://localhost:8080/bravin-transport.html"
+    start "" "http://localhost:8080/index.html"
     npx http-server -p 8080
     goto end
 )
@@ -29,7 +29,7 @@ if %errorlevel% equ 0 (
 echo [WARNING] No local server (Python/Node) detected.
 echo Opening app directly in browser (some mobile features like PWA offline installation will be disabled).
 echo.
-start "" "bravin-transport.html"
+start "" "index.html"
 
 :end
 pause

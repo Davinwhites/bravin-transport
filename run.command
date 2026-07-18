@@ -7,17 +7,17 @@ echo ""
 
 if command -v python3 &>/dev/null; then
     echo "[OK] Python 3 detected. Starting server on http://localhost:8000..."
-    open "http://localhost:8000/bravin-transport.html"
+    open "http://localhost:8000/index.html"
     python3 -m http.server 8000
 elif command -v python &>/dev/null; then
     echo "[OK] Python detected. Starting server on http://localhost:8000..."
-    open "http://localhost:8000/bravin-transport.html"
+    open "http://localhost:8000/index.html"
     python -m http.server 8000
 elif command -v npx &>/dev/null; then
     echo "[OK] Node/npx detected. Starting server on http://localhost:8080..."
-    open "http://localhost:8080/bravin-transport.html"
+    open "http://localhost:8080/index.html"
     npx http-server -p 8080
 else
     echo "[WARNING] No local server detected. Opening directly..."
-    open "bravin-transport.html"
+    open "index.html"
 fi

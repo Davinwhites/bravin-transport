@@ -2,7 +2,7 @@
   "name": "Bravin Transport",
   "short_name": "Bravin",
   "description": "Uganda's Premier Ride-Hailing Platform",
-  "start_url": "./bravin-transport.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d0d10",
   "theme_color": "#27963c",

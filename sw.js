@@ -1,6 +1,6 @@
 const CACHE_NAME = 'bravin-transport-v1';
 const ASSETS = [
-  './bravin-transport.html',
+  './index.html',
   './taxisify_app_logo.png',
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
