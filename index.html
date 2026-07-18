@@ -2087,20 +2087,20 @@ function renderGatewayLayout(phoneNum) {
           <span class="form-label">Pickup Point (Entire Uganda Search)</span>
           <div class="form-input-box">
             <span class="dot-marker dot-pickup"></span>
-            <input type="text" class="form-input-text" id="p${phoneNum}-pickup-search" placeholder="Type pickup location..." value="Kampala, Uganda">
-            <button class="doc-btn" style="margin:0; background:var(--primary); color:#fff; padding:4px 8px; font-size:9.5px;" onclick="triggerDeviceGeocodeSearch(${phoneNum}, 'pickup')">Search</button>
+            <input type="text" class="form-input-text" id="p\${phoneNum}-pickup-search" placeholder="Type pickup location..." value="Kampala, Uganda" onfocus="showSearchDropdown(\${phoneNum}, 'pickup')">
+            <button class="doc-btn" style="margin:0; background:var(--primary); color:#fff; padding:4px 8px; font-size:9.5px;" onclick="triggerDeviceGeocodeSearch(\${phoneNum}, 'pickup')">Search</button>
           </div>
-          <div class="search-results-list" id="p${phoneNum}-pickup-results" style="display:none;"></div>
+          <div class="search-results-list" id="p\${phoneNum}-pickup-results" style="display:none;"></div>
         </div>
 
         <div class="form-group" style="position:relative; z-index:290;">
           <span class="form-label">Destination</span>
           <div class="form-input-box">
             <span class="dot-marker dot-dest"></span>
-            <input type="text" class="form-input-text" id="p${phoneNum}-dest-search" placeholder="Type destination..." value="Ntinda, Kampala">
-            <button class="doc-btn" style="margin:0; background:var(--primary); color:#fff; padding:4px 8px; font-size:9.5px;" onclick="triggerDeviceGeocodeSearch(${phoneNum}, 'dest')">Search</button>
+            <input type="text" class="form-input-text" id="p\${phoneNum}-dest-search" placeholder="Type destination..." value="Ntinda, Kampala" onfocus="showSearchDropdown(\${phoneNum}, 'dest')">
+            <button class="doc-btn" style="margin:0; background:var(--primary); color:#fff; padding:4px 8px; font-size:9.5px;" onclick="triggerDeviceGeocodeSearch(\${phoneNum}, 'dest')">Search</button>
           </div>
-          <div class="search-results-list" id="p${phoneNum}-dest-results" style="display:none;"></div>
+          <div class="search-results-list" id="p\${phoneNum}-dest-results" style="display:none;"></div>
         </div>
 
         <span class="form-label" style="margin-top:6px;">Select Service</span>
@@ -2257,7 +2257,20 @@ function renderGatewayLayout(phoneNum) {
       </div>
       
       <!-- Driver map -->
-      <div class="phone-map" id="p${phoneNum}-driver-map"></div>
+      <div style="position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+        <!-- Top Floating Roadmap Directions panel -->
+        <div id="p\${phoneNum}-driver-directions" style="display:none; position:absolute; top:10px; left:10px; right:10px; background:rgba(20,20,25,0.92); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px; z-index:1000; box-shadow:0 8px 24px rgba(0,0,0,0.5); backdrop-filter:blur(10px); color:#fff; animation:slideDown 0.3s ease;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px; margin-bottom:5px;">
+            <span style="font-family:'Space Grotesk'; font-size:10px; font-weight:700; color:var(--primary); letter-spacing:0.05em; text-transform:uppercase;">🛣️ Possible Routes</span>
+            <span style="font-size:9.5px; color:var(--text-muted); font-family:'JetBrains Mono'; font-weight:700;" id="p\${phoneNum}-driver-route-meta">OSRM Maps</span>
+          </div>
+          <div id="p\${phoneNum}-driver-routes-list" style="display:flex; flex-direction:column; gap:4px; max-height:80px; overflow-y:auto;">
+            <!-- Filled dynamically with routes -->
+          </div>
+        </div>
+
+        <div class="phone-map" id="p\${phoneNum}-driver-map" style="height:100%; width:100%;"></div>
+      </div>
 
       <!-- Driver active nav panel slide overlay -->
       <div class="slide-panel">
@@ -3454,53 +3467,281 @@ function selectPrivateDuration(phoneNum, duration, element) {
   updateDeviceRouteDrawing(phoneNum);
 }
 
-// DEVICE GEOCODING SEARCH
+// DEVICE GEOCODING SEARCH DROPDOWN FOCUS HANDLER
+function showSearchDropdown(phoneNum, type) {
+  const resultsDiv = document.getElementById(`p${phoneNum}-${type}-results`);
+  if (!resultsDiv) return;
+  resultsDiv.innerHTML = '';
+  resultsDiv.style.display = 'block';
+
+  // If this is pickup, show the "Use Current Location" option first!
+  if (type === 'pickup') {
+    const gpsRow = document.createElement('div');
+    gpsRow.className = 'search-result-item';
+    gpsRow.style.cssText = 'color:#27963C; font-weight:700; background:rgba(39, 150, 60, 0.12); border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:6px; font-size:11px; padding:10px 8px;';
+    gpsRow.innerHTML = `📍 <span style="text-decoration:underline;">Use My Current Location (Exact GPS)</span>`;
+    gpsRow.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resultsDiv.style.display = 'none';
+      document.getElementById(`p${phoneNum}-pickup-search`).value = "Locating phone GPS...";
+      
+      requestDeviceLocation(phoneNum, () => {
+        const device = Devices[phoneNum];
+        const lat = device.pickupCoords.lat;
+        const lng = device.pickupCoords.lng;
+        
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            const addr = data.display_name.split(',')[0] + ', ' + (data.display_name.split(',')[1] || '').trim();
+            document.getElementById(`p${phoneNum}-pickup-search`).value = addr;
+            device.pickupCoords.name = data.display_name;
+            devLog('SYSTEM', 'SYS', `GPS Location resolved: "${addr}" -> [${lat.toFixed(5)}, ${lng.toFixed(5)}]`);
+            updateDeviceRouteDrawing(phoneNum);
+          })
+          .catch(() => {
+            document.getElementById(`p${phoneNum}-pickup-search`).value = `GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            updateDeviceRouteDrawing(phoneNum);
+          });
+      });
+    });
+    resultsDiv.appendChild(gpsRow);
+  }
+
+  // Pre-fill popular local spots in Kampala/Uganda to save user typing
+  const popularSpots = [
+    { name: "Acacia Mall, Kampala", lat: 0.3347, lng: 32.5898 },
+    { name: "Kampala Road (Central Station)", lat: 0.3136, lng: 32.5811 },
+    { name: "Makerere University, Kampala", lat: 0.3342, lng: 32.5694 },
+    { name: "Ntinda Shopping Centre, Kampala", lat: 0.3540, lng: 32.6105 },
+    { name: "Mulago Hospital, Kampala", lat: 0.3378, lng: 32.5761 }
+  ];
+
+  popularSpots.forEach(spot => {
+    const row = document.createElement('div');
+    row.className = 'search-result-item';
+    row.style.padding = '8px 10px';
+    row.textContent = spot.name;
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resultsDiv.style.display = 'none';
+      document.getElementById(`p${phoneNum}-${type}-search`).value = spot.name;
+      
+      const device = Devices[phoneNum];
+      if (type === 'pickup') {
+        device.pickupCoords = { name: spot.name, lat: spot.lat, lng: spot.lng };
+      } else {
+        device.destCoords = { name: spot.name, lat: spot.lat, lng: spot.lng };
+      }
+      updateDeviceRouteDrawing(phoneNum);
+    });
+    resultsDiv.appendChild(row);
+  });
+  
+  // Close dropdown when clicking outside
+  const closeDropdown = (e) => {
+    if (!e.target.closest(`#p${phoneNum}-${type}-search`) && !e.target.closest(`#p${phoneNum}-${type}-results`)) {
+      resultsDiv.style.display = 'none';
+      document.removeEventListener('click', closeDropdown);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeDropdown), 10);
+}
+
+// FUZZY TYPO-TOLERANT GEOCODING SEARCH WITH PHOTON API
 function triggerDeviceGeocodeSearch(phoneNum, type) {
-  const query = document.getElementById(`p${phoneNum}-${type}-search`).value;
+  const query = document.getElementById(`p${phoneNum}-${type}-search`).value.trim();
   if (!query) return;
 
   const resultsDiv = document.getElementById(`p${phoneNum}-${type}-results`);
   resultsDiv.innerHTML = '<div style="padding:8px; color:var(--text-muted); font-size:10px; background:#25252B;">Searching Uganda maps...</div>';
   resultsDiv.style.display = 'block';
 
-  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ug&limit=5`)
+  // Query Photon API (Fuzzy, typo-tolerant, biased towards Kampala coords)
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=0.3476&lon=32.5825&limit=8`;
+
+  fetch(url)
     .then(res => res.json())
     .then(data => {
       resultsDiv.innerHTML = '';
-      if (data.length === 0) {
-        resultsDiv.innerHTML = '<div style="padding:8px; color:var(--secondary); font-size:10px; background:#25252B;">No locations found.</div>';
+      
+      if (type === 'pickup') {
+        // Retain GPS row at top
+        const gpsRow = document.createElement('div');
+        gpsRow.className = 'search-result-item';
+        gpsRow.style.cssText = 'color:#27963C; font-weight:700; background:rgba(39, 150, 60, 0.12); border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:6px; font-size:11px; padding:10px 8px;';
+        gpsRow.innerHTML = `📍 <span style="text-decoration:underline;">Use My Current Location (Exact GPS)</span>`;
+        gpsRow.addEventListener('click', () => {
+          resultsDiv.style.display = 'none';
+          document.getElementById(`p${phoneNum}-pickup-search`).value = "Locating phone GPS...";
+          requestDeviceLocation(phoneNum, () => {
+            const device = Devices[phoneNum];
+            const lat = device.pickupCoords.lat;
+            const lng = device.pickupCoords.lng;
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+              .then(r => r.json())
+              .then(d => {
+                const addr = d.display_name.split(',')[0] + ', ' + (d.display_name.split(',')[1] || '').trim();
+                document.getElementById(`p${phoneNum}-pickup-search`).value = addr;
+                device.pickupCoords.name = d.display_name;
+                updateDeviceRouteDrawing(phoneNum);
+              });
+          });
+        });
+        resultsDiv.appendChild(gpsRow);
+      }
+
+      if (!data.features || data.features.length === 0) {
+        resultsDiv.innerHTML += '<div style="padding:8px; color:var(--secondary); font-size:10px; background:#25252B;">No locations found.</div>';
         return;
       }
-      
-      data.forEach(item => {
+
+      data.features.forEach(feat => {
+        const props = feat.properties;
+        const geom = feat.geometry;
+        
+        let name = props.name || '';
+        const details = [];
+        if (props.street) details.push(props.street);
+        if (props.city || props.town) details.push(props.city || props.town);
+        if (props.country && props.country !== 'Uganda') details.push(props.country);
+        
+        const displayName = name + (details.length > 0 ? ` (${details.join(', ')})` : '');
+        
         const row = document.createElement('div');
         row.className = 'search-result-item';
-        row.textContent = item.display_name;
+        row.style.padding = '8px 10px';
+        row.textContent = displayName;
         
         row.addEventListener('click', () => {
           resultsDiv.style.display = 'none';
-          document.getElementById(`p${phoneNum}-${type}-search`).value = item.display_name.split(',')[0] + ', ' + (item.display_name.split(',')[1] || '').trim();
+          document.getElementById(`p${phoneNum}-${type}-search`).value = name;
           
-          const lat = parseFloat(item.lat);
-          const lng = parseFloat(item.lon);
+          const lng = geom.coordinates[0];
+          const lat = geom.coordinates[1];
           
           const device = Devices[phoneNum];
           if (type === 'pickup') {
-            device.pickupCoords = { name: item.display_name, lat, lng };
-            devLog('SYSTEM', 'SYS', `Device ${phoneNum} geocoded pickup: "${item.display_name.split(',')[0]}" -> [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
+            device.pickupCoords = { name: displayName, lat, lng };
           } else {
-            device.destCoords = { name: item.display_name, lat, lng };
-            devLog('SYSTEM', 'SYS', `Device ${phoneNum} geocoded dropoff: "${item.display_name.split(',')[0]}" -> [${lat.toFixed(4)}, ${lng.toFixed(4)}]`);
+            device.destCoords = { name: displayName, lat, lng };
           }
-          
           updateDeviceRouteDrawing(phoneNum);
         });
         resultsDiv.appendChild(row);
       });
     })
     .catch(err => {
-      devLog('SYSTEM', 'ERROR', `Nominatim search failed: ${err.message}`);
-      resultsDiv.innerHTML = '<div style="padding:8px; color:var(--secondary); font-size:10px; background:#25252B;">Error mapping place.</div>';
+      devLog('SYSTEM', 'ERROR', `Photon Geocoder failed: ${err.message}`);
+      resultsDiv.innerHTML = '<div style="padding:8px; color:var(--secondary); font-size:10px; background:#25252B;">Error matching place name.</div>';
+    });
+}
+
+// DRIVER ALTERNATIVE ROUTES AND ROADMAP DIRECTIONS
+function updateDriverRoadmap(phoneNum, from, to) {
+  const directionsDiv = document.getElementById(`p${phoneNum}-driver-directions`);
+  const routesList = document.getElementById(`p${phoneNum}-driver-routes-list`);
+  if (!directionsDiv || !routesList) return;
+
+  directionsDiv.style.display = 'block';
+  routesList.innerHTML = '<div style="font-size:9.5px; color:var(--text-muted); padding:3px;">Calculating possible routes...</div>';
+
+  // Request alternative routing lines from OSRM
+  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&alternatives=true`;
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      routesList.innerHTML = '';
+      if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+        routesList.innerHTML = '<div style="font-size:9.5px; color:var(--secondary); padding:3px;">No routes found.</div>';
+        return;
+      }
+
+      const device = Devices[phoneNum];
+      if (!device.map) return;
+
+      // Clear old alternatives
+      if (device.altRouteLines) {
+        device.altRouteLines.forEach(line => device.map.removeLayer(line));
+      }
+      device.altRouteLines = [];
+
+      data.routes.forEach((route, idx) => {
+        const distKm = (route.distance / 1000).toFixed(1);
+        const durMin = Math.round(route.duration / 60) + 1;
+        const coords = route.geometry.coordinates;
+        const points = coords.map(c => [c[1], c[0]]);
+
+        let routeName = idx === 0 ? "Via Highway (Fastest)" : `Alternative Route ${idx}`;
+        if (idx === 0) {
+          document.getElementById(`p${phoneNum}-driver-route-meta`).textContent = `${distKm} km • ${durMin} min`;
+        }
+
+        const color = idx === 0 ? '#27963C' : '#64748B';
+        const opacity = idx === 0 ? 0.9 : 0.45;
+        const dashArray = idx === 0 ? null : '5, 10';
+        
+        const line = L.polyline(points, {
+          color: color,
+          weight: idx === 0 ? 4.5 : 3.5,
+          opacity: opacity,
+          dashArray: dashArray
+        }).addTo(device.map);
+        device.altRouteLines.push(line);
+
+        const row = document.createElement('div');
+        row.style.cssText = `
+          padding: 6px 8px;
+          border-radius: 6px;
+          background: ${idx === 0 ? 'rgba(39, 150, 60, 0.15)' : 'rgba(255,255,255,0.03)'};
+          border: 1px solid ${idx === 0 ? 'var(--primary)' : 'rgba(255,255,255,0.06)'};
+          cursor: pointer;
+          font-size: 9.5px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          transition: all 0.2s ease;
+        `;
+        row.innerHTML = `
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:${color}; font-size:10px;">${idx === 0 ? '🟢' : '⚪'}</span>
+            <span style="font-weight:${idx === 0 ? '700' : '500'}; color:${idx === 0 ? '#fff' : 'var(--text-muted)'}">${routeName}</span>
+          </div>
+          <span style="font-family:'JetBrains Mono'; font-weight:700; color:${idx === 0 ? 'var(--primary)' : '#fff'}">${durMin}m (${distKm}k)</span>
+        `;
+
+        row.addEventListener('click', () => {
+          routesList.querySelectorAll('div').forEach(el => {
+            el.style.background = 'rgba(255,255,255,0.03)';
+            el.style.borderColor = 'rgba(255,255,255,0.06)';
+          });
+          row.style.background = 'rgba(39, 150, 60, 0.15)';
+          row.style.borderColor = 'var(--primary)';
+
+          device.altRouteLines.forEach((l, lIdx) => {
+            if (lIdx === idx) {
+              l.setStyle({ color: '#27963C', weight: 4.5, opacity: 0.9, dashArray: null });
+              l.bringToFront();
+            } else {
+              l.setStyle({ color: '#64748B', weight: 3.5, opacity: 0.45, dashArray: '5, 10' });
+            }
+          });
+          document.getElementById(`p${phoneNum}-driver-route-meta`).textContent = `${distKm} km • ${durMin} min`;
+          devLog('SYSTEM', 'SYS', `Driver rerouted to: ${routeName}`);
+        });
+
+        routesList.appendChild(row);
+      });
+      
+      if (device.altRouteLines.length > 0) {
+        const bounds = device.altRouteLines[0].getBounds();
+        device.map.fitBounds(bounds, { padding: [35, 35] });
+      }
+    })
+    .catch(err => {
+      devLog('SYSTEM', 'ERROR', `OSRM Alternatives failed: ${err.message}`);
+      routesList.innerHTML = '<div style="font-size:9.5px; color:var(--text-muted); padding:3px;">No alternative routes found.</div>';
     });
 }
 
@@ -3689,6 +3930,18 @@ WS.on('driver:accept_request', function(data) {
   actionBtn.className = 'btn btn-success';
   actionBtn.textContent = 'I HAVE ARRIVED';
 
+  // Render Pickup and Destination pins on Driver Map
+  const devD = Devices[data.driverPhoneNum];
+  if (devD.map) {
+    if (devD.markers.pickup) devD.map.removeLayer(devD.markers.pickup);
+    if (devD.markers.dest) devD.map.removeLayer(devD.markers.dest);
+    devD.markers.pickup = L.marker([activeTrip.pickupLat, activeTrip.pickupLng], { icon: customPinIcon('#27963C', 'P') }).addTo(devD.map);
+    devD.markers.dest = L.marker([activeTrip.destLat, activeTrip.destLng], { icon: customPinIcon('#C4432B', 'D') }).addTo(devD.map);
+  }
+  
+  // Calculate and draw alternatives roadmap to passenger
+  updateDriverRoadmap(data.driverPhoneNum, driverObj, { lat: activeTrip.pickupLat, lng: activeTrip.pickupLng });
+
   // 3. ANIMATION EN ROUTE
   simulateDriverLocationMovementOnDevice(data.driverPhoneNum, driverObj, { lat: activeTrip.pickupLat, lng: activeTrip.pickupLng }, 'arrived');
 });
@@ -3867,6 +4120,10 @@ WS.on('driver:start_trip', function(data) {
   actionBtn.textContent = 'COMPLETE TRIP';
 
   const driverObj = DB.drivers.find(d => d.id === activeTrip.driverId);
+  
+  // Calculate and draw alternatives roadmap to dropoff destination
+  updateDriverRoadmap(data.driverPhoneNum, driverObj, { lat: activeTrip.destLat, lng: activeTrip.destLng });
+
   simulateDriverLocationMovementOnDevice(data.driverPhoneNum, driverObj, { lat: activeTrip.destLat, lng: activeTrip.destLng }, 'completed');
 });
 
@@ -3874,6 +4131,15 @@ WS.on('driver:start_trip', function(data) {
 WS.on('server:trigger_trip_completed', function(data) {
   devLog('SYSTEM', 'SYS', `Trip ID ${activeTrip.id} reached destination.`);
   activeTrip.status = 'arrived_dest';
+
+  // Hide directions panel and clear alternative lines
+  const directionsDiv = document.getElementById(`p${data.driverPhoneNum}-driver-directions`);
+  if (directionsDiv) directionsDiv.style.display = 'none';
+  const devD = Devices[data.driverPhoneNum];
+  if (devD && devD.altRouteLines) {
+    devD.altRouteLines.forEach(l => devD.map.removeLayer(l));
+    devD.altRouteLines = [];
+  }
 
   document.getElementById(`p${data.driverPhoneNum}-driver-action-btn`).className = 'btn btn-primary';
   document.getElementById(`p${data.driverPhoneNum}-driver-action-btn`).textContent = 'AWAITING PAYMENT';
@@ -4082,6 +4348,14 @@ WS.on('client:cancel_trip', function(data) {
 
   switchPhoneScreen(data.phoneNum, 'rider-main');
   
+  const directionsDiv = document.getElementById(`p${driverPhoneNum}-driver-directions`);
+  if (directionsDiv) directionsDiv.style.display = 'none';
+  const devD = Devices[driverPhoneNum];
+  if (devD && devD.altRouteLines) {
+    devD.altRouteLines.forEach(l => devD.map.removeLayer(l));
+    devD.altRouteLines = [];
+  }
+
   document.getElementById(`p${driverPhoneNum}-driver-active-panel`).style.display = 'none';
   document.getElementById(`p${driverPhoneNum}-driver-idle-panel`).style.display = 'block';
 
