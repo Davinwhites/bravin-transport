@@ -2826,19 +2826,8 @@ function submitPassengerRegister(phoneNum) {
     return;
   }
 
-  // Generate code and enter pending
-  const code = Math.floor(1000 + Math.random() * 9000);
-  Devices[phoneNum].pendingRegistration = {
-    role: 'passenger',
-    code: code,
-    payload: { fname, lname, email, phone, pin }
-  };
-
-  document.getElementById(`p${phoneNum}-verification-overlay`).style.display = 'flex';
-  document.getElementById(`p${phoneNum}-verify-email-desc`).textContent = `We sent a confirmation code to ${email}.`;
-  
-  triggerPhoneNotificationToast(phoneNum, `Confirmation Code: ${code}. Enter this code to verify your identity.`);
-  sendVerificationEmail(email, code);
+  // Complete registration instantly without verification code overlay
+  completePassengerRegister(phoneNum, { fname, lname, email, phone, pin });
 }
 
 function completePassengerRegister(phoneNum, payload) {
@@ -3230,19 +3219,8 @@ function submitDriverRegister(phoneNum) {
     return;
   }
 
-  // Generate code and enter pending
-  const code = Math.floor(1000 + Math.random() * 9000);
-  Devices[phoneNum].pendingRegistration = {
-    role: 'driver',
-    code: code,
-    payload: { fname, lname, email, phone, plate, route, pin }
-  };
-
-  document.getElementById(`p${phoneNum}-verification-overlay`).style.display = 'flex';
-  document.getElementById(`p${phoneNum}-verify-email-desc`).textContent = `We sent a confirmation code to ${email}.`;
-  
-  triggerPhoneNotificationToast(phoneNum, `Confirmation Code: ${code}. Enter this code to verify your identity.`);
-  sendVerificationEmail(email, code);
+  // Complete registration instantly without verification code overlay
+  completeDriverRegister(phoneNum, { fname, lname, email, phone, plate, route, pin });
 }
 
 function completeDriverRegister(phoneNum, payload) {
