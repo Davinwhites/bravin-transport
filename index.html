@@ -109,8 +109,15 @@
         deferredPrompt = null;
       });
     } else {
-      // iOS trigger or fallback: show instructions overlay
-      alert("To Install on iOS:\n1. Tap the Share button (bottom or top of Safari)\n2. Scroll down and select 'Add to Home Screen'\n3. Open it from your phone home screen!");
+      alert("How to Install Bravin Transport on your phone:\n\n" +
+            "📱 Apple iPhone (Safari):\n" +
+            "1. Tap the 'Share' icon (square with an up arrow at the bottom of Safari).\n" +
+            "2. Scroll down and tap 'Add to Home Screen'.\n" +
+            "3. Tap 'Add' in the top-right corner.\n\n" +
+            "🤖 Android (Chrome/Firefox):\n" +
+            "1. Tap the 3 dots (menu) in the top-right corner of the browser.\n" +
+            "2. Tap 'Add to Home screen' or 'Install App'.\n" +
+            "3. Follow the prompt to install.");
     }
   }
 </script>
@@ -2019,7 +2026,7 @@ function renderGatewayLayout(phoneNum) {
       </div>
       
       <!-- PWA Install Button -->
-      <button class="btn btn-primary pwa-download-btn" onclick="triggerPwaInstallation()" style="display:none; background:#27963C; color:#fff; font-weight:700; margin-top:10px; align-items:center; justify-content:center; gap:8px; width:100%;">
+      <button class="btn btn-primary pwa-download-btn" onclick="triggerPwaInstallation()" style="display:flex; background:#27963C; color:#fff; font-weight:700; margin-top:10px; align-items:center; justify-content:center; gap:8px; width:100%;">
         📥 Download Bravin App
       </button>
       
