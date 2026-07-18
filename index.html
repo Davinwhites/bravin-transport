@@ -10,12 +10,108 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="./taxisify_app_logo.png">
 <script>
+  let deferredPrompt;
+  let newWorker;
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('PWA Service Worker registered successfully', reg))
-        .catch(err => console.error('PWA Service Worker registration failed', err));
+      navigator.serviceWorker.register('./sw.js').then(reg => {
+        console.log('PWA Service Worker registered successfully');
+
+        // Check if there is an update waiting
+        if (reg.waiting) {
+          newWorker = reg.waiting;
+          showUpdateToastNotification();
+        }
+
+        // Listen for new service worker installation
+        reg.addEventListener('updatefound', () => {
+          newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateToastNotification();
+            }
+          });
+        });
+      }).catch(err => console.error('PWA Service Worker registration failed', err));
     });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        window.location.reload();
+        refreshing = true;
+      }
+    });
+  }
+
+  // Intercept PWA Install Prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show download buttons
+    document.querySelectorAll('.pwa-download-btn').forEach(btn => btn.style.setProperty('display', 'flex', 'important'));
+  });
+
+  // Check iOS installation prompt need
+  window.addEventListener('DOMContentLoaded', () => {
+    const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    const isStandalone = ('standalone' in window.navigator) && (window.navigator.standalone);
+    if (isIos && !isStandalone) {
+      document.querySelectorAll('.pwa-download-btn').forEach(btn => btn.style.setProperty('display', 'flex', 'important'));
+    }
+  });
+
+  function showUpdateToastNotification() {
+    if (document.getElementById('pwa-update-banner')) return;
+    
+    const toast = document.createElement('div');
+    toast.id = 'pwa-update-banner';
+    toast.style.cssText = `
+      position: fixed;
+      top: 15px; left: 50%; transform: translateX(-50%);
+      background: #27963C;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      border: 1.5px solid rgba(255,255,255,0.2);
+    `;
+    toast.innerHTML = `
+      <span>✨ App Update Available!</span>
+      <button onclick="applyPwaUpdate()" style="background:#fff; color:#27963C; border:none; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:800; cursor:pointer; font-family:'Space Grotesk';">Update Now</button>
+    `;
+    document.body.appendChild(toast);
+  }
+
+  function applyPwaUpdate() {
+    if (newWorker) {
+      newWorker.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
+    }
+  }
+
+  function triggerPwaInstallation() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the PWA install prompt');
+        }
+        deferredPrompt = null;
+      });
+    } else {
+      // iOS trigger or fallback: show instructions overlay
+      alert("To Install on iOS:\n1. Tap the Share button (bottom or top of Safari)\n2. Scroll down and select 'Add to Home Screen'\n3. Open it from your phone home screen!");
+    }
   }
 </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -1922,7 +2018,12 @@ function renderGatewayLayout(phoneNum) {
         </div>
       </div>
       
-      <button class="btn btn-secondary" onclick="switchPhoneScreen(${phoneNum}, 'onboarding')">← Home</button>
+      <!-- PWA Install Button -->
+      <button class="btn btn-primary pwa-download-btn" onclick="triggerPwaInstallation()" style="display:none; background:#27963C; color:#fff; font-weight:700; margin-top:10px; align-items:center; justify-content:center; gap:8px; width:100%;">
+        📥 Download Bravin App
+      </button>
+      
+      <button class="btn btn-secondary" onclick="switchPhoneScreen(\${phoneNum}, 'onboarding')" style="margin-top:10px;">← Home</button>
     </div>
 
     <!-- Email Verification Overlay -->
