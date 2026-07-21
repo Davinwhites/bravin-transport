@@ -1,35 +1,30 @@
 @echo off
-title Bravin Transport Launcher
+title Bravin Transport Local Server
 echo ===================================================
-echo   Starting Bravin Transport Web App Simulator...
+echo   Bravin Transport Local Server Launcher
 echo ===================================================
 echo.
-echo Attempting to start local server...
-echo.
 
-:: Check if Python is installed to start a server
-where python >nul 2>nul
+where php >nul 2>nul
 if %errorlevel% equ 0 (
-    echo [OK] Python detected. Starting server on http://localhost:8000...
-    start "" "http://localhost:8000/index.html"
-    python -m http.server 8000
-    goto end
+    echo [OK] PHP found! Starting PHP development server...
+    echo.
+    echo Launching: http://localhost:8080/index.html
+    start http://localhost:8080/index.html
+    php -S localhost:8080
+) else (
+    echo [NOTICE] PHP not found in system PATH.
+    echo.
+    where python >nul 2>nul
+    if %errorlevel% equ 0 (
+        echo [OK] Python found! Starting static fallback server...
+        echo Launching: http://localhost:8000/index.html
+        start http://localhost:8000/index.html
+        python -m http.server 8000
+    ) else (
+        echo [ERROR] Neither PHP nor Python is installed on your system.
+        echo Please install PHP or Python to test this application locally.
+        echo.
+    )
 )
-
-:: Check if Node is installed (npx)
-where npx >nul 2>nul
-if %errorlevel% equ 0 (
-    echo [OK] Node/npx detected. Starting server on http://localhost:8080...
-    start "" "http://localhost:8080/index.html"
-    npx http-server -p 8080
-    goto end
-)
-
-:: Fallback: Open directly as file if no server is available
-echo [WARNING] No local server (Python/Node) detected.
-echo Opening app directly in browser (some mobile features like PWA offline installation will be disabled).
-echo.
-start "" "index.html"
-
-:end
 pause

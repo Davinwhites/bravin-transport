@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bravin Transport — Driver</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#27963C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./taxisify_app_logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0C0C0E; --paper: #141417; --sand: #1B1B1F;
+    --border: #2E2E35; --border-light: rgba(255,255,255,0.08);
+    --text: #F7F4EE; --text-muted: #8E8E93;
+    --primary: #27963C; --primary-hover: #1E7A2E;
+    --secondary: #C4432B; --danger: #C4432B;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--ink); color: var(--text); font-family: 'Work Sans', sans-serif; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+  #app { height: 100dvh; width: 100%; position: relative; }
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; height: 100%; background: var(--ink); }
+  .screen.active { display: flex; }
+
+  #screen-splash1, #screen-splash2 { align-items: center; justify-content: center; background: var(--ink); }
+  .splash-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -0.02em; display: flex; flex-direction: column; align-items: center; gap: 18px; animation: fadeIn .5s ease; }
+  .splash-logo span { color: var(--primary); }
+  .spin-ring { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--primary); animation: spin 0.85s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .splash-tag { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; letter-spacing: .04em; }
+
+  .pad { padding: 24px 20px; }
+  .app-header { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
+  .app-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; }
+  .scroll { flex: 1; overflow-y: auto; }
+  h1.hero { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 24px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  p.sub { color: var(--text-muted); font-size: 13px; margin: 0 0 22px; line-height: 1.5; }
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
+  .field { margin-bottom: 16px; }
+  .phone-input-row { display: flex; gap: 8px; }
+  .cc { width: 64px; background: var(--sand); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  input { width: 100%; background: var(--sand); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 15px; padding: 13px 14px; font-family: 'Work Sans', sans-serif; outline: none; }
+  input:focus { border-color: var(--primary); }
+  ::placeholder { color: #5b5b60; }
+  .btn { width: 100%; border: none; border-radius: 12px; padding: 15px; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: transform .1s ease, opacity .15s ease; }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--text-muted); font-size: 12.5px; padding: 10px; text-align: center; cursor: pointer; }
+  .error-msg { color: var(--secondary); font-size: 12px; margin-top: 10px; display: none; }
+  .center-col { display: flex; flex-direction: column; justify-content: center; flex: 1; }
+
+  .home-hello { padding: 26px 20px; }
+  .home-card { background: var(--sand); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin: 0 20px 14px; }
+  .badge-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(39,150,60,0.15); color: var(--primary); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; }
+  .logout-link { color: var(--text-muted); font-size: 12px; text-align: center; padding: 16px; cursor: pointer; }
+  .pwa-download-btn { display: none; align-items: center; justify-content: center; gap: 8px; background: var(--sand); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; margin: 0 20px 14px; }
+
+  #screen-offline { align-items: center; justify-content: center; text-align: center; z-index: 999; }
+  .offline-icon { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 18px; }
+  #screen-offline h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 20px; margin: 0 0 8px; }
+  #screen-offline p { color: var(--text-muted); font-size: 13px; max-width: 260px; margin: 0 auto 22px; line-height: 1.5; }
+  .btn-retry { background: var(--sand); border: 1px solid var(--border); color: var(--text); padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: 'Space Grotesk', sans-serif; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="screen active" id="screen-splash1">
+    <div class="splash-logo"><span>Bravin</span> Transport<div class="spin-ring"></div></div>
+  </div>
+
+  <div class="screen" id="screen-splash2">
+    <div class="splash-logo"><div class="spin-ring"></div><span class="splash-tag">Finding your way around Uganda…</span></div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen" id="screen-login">
+    <div class="app-header"><div class="app-title">Bravin <span style="color:var(--primary)">Transport</span></div></div>
+    <div class="scroll pad center-col">
+      <h1 class="hero">Welcome back, Driver</h1>
+      <p class="sub">Log in with your phone number and password.</p>
+      <div class="field">
+        <label>Phone Number</label>
+        <div class="phone-input-row"><div class="cc">+256</div><input type="tel" id="login-phone" placeholder="7XX XXX XXX" maxlength="9" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" id="btn-login">Log In</button>
+      <div class="error-msg" id="login-error"></div>
+      <div class="btn-ghost" id="go-to-register">New here? Create an account</div>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="screen" id="screen-register">
+    <div class="app-header"><div class="app-title">Create Account</div></div>
+    <div class="scroll pad">
+      <h1 class="hero" style="margin-top:10px;">Let's get you set up</h1>
+      <p class="sub">This is only needed once — after this you just log in.</p>
+      <div class="field"><label>First Name</label><input type="text" id="reg-fname" placeholder="e.g. Brenda"></div>
+      <div class="field"><label>Last Name</label><input type="text" id="reg-lname" placeholder="e.g. Namubiru"></div>
+      <div class="field">
+        <label>Phone Number</label>
+        <div class="phone-input-row"><div class="cc">+256</div><input type="tel" id="reg-phone" placeholder="7XX XXX XXX" maxlength="9" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label>Email (optional)</label><input type="email" id="reg-email" placeholder="you@example.com"></div>
+      <div class="field">
+        <label>Vehicle Type</label>
+        <select id="reg-vehicle-type" style="width:100%; background:var(--sand); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:15px; padding:13px 14px; font-family:'Work Sans', sans-serif;">
+          <option value="boda">Boda Boda</option>
+          <option value="taxi">Taxi</option>
+          <option value="private">Special Hire (Private)</option>
+        </select>
+      </div>
+      <div class="field"><label>Number Plate</label><input type="text" id="reg-plate" placeholder="e.g. UBG 123X" style="text-transform:uppercase;"></div>
+      <div class="field"><label>Usual Route / Area (optional)</label><input type="text" id="reg-route" placeholder="e.g. Kampala – Ntinda"></div>
+      <div class="field"><label>Password</label><input type="password" id="reg-password" placeholder="At least 6 characters"></div>
+      <button class="btn btn-primary" id="btn-register">Create Account</button>
+      <div class="error-msg" id="register-error"></div>
+      <div class="btn-ghost" id="go-to-login">Already have an account? Log in</div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home">
+    <div class="app-header">
+      <div class="app-title">Bravin <span style="color:var(--primary)">Transport</span></div>
+      <span class="badge-pill">● Logged in</span>
+    </div>
+    <div class="scroll">
+      <div class="home-hello">
+        <h1 class="hero" id="home-greeting">Hey there 👋</h1>
+        <p class="sub">Your account is saved in the database — next time you open the app you'll skip straight past login.</p>
+      </div>
+      <div class="home-card">
+        <div style="font-family:'Space Grotesk'; font-weight:700; font-size:14px; margin-bottom:6px;">Account status</div>
+        <div style="color:var(--text-muted); font-size:12.5px; line-height:1.6;" id="approval-status-text">Checking approval status…</div>
+      </div>
+      <div class="home-card">
+        <div style="font-family:'Space Grotesk'; font-weight:700; font-size:14px; margin-bottom:6px;">Ride requests</div>
+        <div style="color:var(--text-muted); font-size:12.5px; line-height:1.6;">This is where nearby ride requests, live routes, and the accept/decline flow plug in next.</div>
+      </div>
+      <button class="pwa-download-btn" id="install-btn">⬇ Install App to Home Screen</button>
+      <div class="logout-link" id="btn-logout">Log out</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- OFFLINE BLOCK — sits above everything, shown/hidden by JS regardless of which screen is active -->
+<div class="screen" id="screen-offline" style="position:fixed;">
+  <div class="offline-icon">⚠️</div>
+  <h1>No internet connection</h1>
+  <p>Bravin Transport needs an active connection to log in, book rides, and stay in sync with your account. Please reconnect and try again.</p>
+  <button class="btn-retry" id="btn-retry-connection">Retry</button>
+</div>
+
+<script src="./mock-api.js"></script>
+<script>
+  // ---------- CONFIG ----------
+  // Point this at wherever you deploy the /api folder. For local testing with `php -S localhost:8080`,
+  // this default is already correct.
+  const API_BASE = window.location.origin + '/api';
+  const TOKEN_KEY = 'bravin_driver_token';
+
+  const screens = {};
+  document.querySelectorAll('.screen').forEach(s => screens[s.id] = s);
+  function show(id) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[id].classList.add('active'); }
+
+  // ---------- OFFLINE HANDLING: block the whole app if there's no connection ----------
+  let lastScreenBeforeOffline = 'screen-login';
+  function checkConnection() {
+    if (!navigator.onLine) {
+      const current = Object.values(screens).find(s => s.classList.contains('active') && s.id !== 'screen-offline');
+      if (current) lastScreenBeforeOffline = current.id;
+      show('screen-offline');
+    } else if (screens['screen-offline'].classList.contains('active')) {
+      show(lastScreenBeforeOffline);
+      resolveEntryScreen();
+    }
+  }
+  window.addEventListener('offline', checkConnection);
+  window.addEventListener('online', checkConnection);
+  document.getElementById('btn-retry-connection').addEventListener('click', checkConnection);
+
+  async function api(path, options = {}) {
+    if (!navigator.onLine) { checkConnection(); throw new Error('No internet connection'); }
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    // Auto fallback on static environments (Vercel, GitHub Pages)
+    const useLocalMock = window.location.hostname.endsWith('vercel.app') || 
+                         window.location.hostname.endsWith('github.io') || 
+                         window.location.protocol === 'file:';
+                         
+    if (useLocalMock && typeof window.simulateBackendCall === 'function') {
+      return window.simulateBackendCall(path, options);
+    }
+
+    let res;
+    try {
+      res = await fetch(API_BASE + path, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+          ...(options.headers || {})
+        }
+      });
+    } catch (networkErr) {
+      if (typeof window.simulateBackendCall === 'function') {
+        console.warn('PHP server unreachable, falling back to local simulation database');
+        return window.simulateBackendCall(path, options);
+      }
+      checkConnection();
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
+    
+    if ((res.status === 404 || res.status === 502) && typeof window.simulateBackendCall === 'function') {
+      console.warn(`PHP endpoint returned ${res.status}, falling back to local simulation.`);
+      return window.simulateBackendCall(path, options);
+    }
+    
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    return data;
+  }
+
+  // Watch for mock administrative approval events
+  window.addEventListener('mock_driver_approved', () => {
+    const current = Object.values(screens).find(s => s.classList.contains('active'));
+    if (current && current.id === 'screen-home') {
+      resolveEntryScreen();
+    }
+  });
+
+  // ---------- LOADING TRANSITIONS then check for saved session ----------
+  setTimeout(() => show('screen-splash2'), 900);
+  setTimeout(() => { if (!navigator.onLine) { checkConnection(); } else { resolveEntryScreen(); } }, 1900);
+
+  async function resolveEntryScreen() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { show('screen-login'); return; }
+    try {
+      const data = await api('/driver/me.php');
+      renderHome(data.user);
+      show('screen-home');
+    } catch (e) {
+      localStorage.removeItem(TOKEN_KEY);
+      show('screen-login');
+    }
+  }
+
+  function renderHome(user) {
+    document.getElementById('home-greeting').textContent = `Hey ${user.fname || 'there'} 👋`;
+    const statusEl = document.getElementById('approval-status-text');
+    const status = user.approvalStatus || 'pending';
+    statusEl.textContent = status === 'approved'
+      ? '✅ You are approved and can go online to receive ride requests.'
+      : status === 'rejected'
+      ? '❌ Your application was not approved. Contact support for details.'
+      : "⏳ Your documents are pending admin approval. You can browse the app but can't go online yet.";
+  }
+
+  document.getElementById('go-to-register').addEventListener('click', () => show('screen-register'));
+  document.getElementById('go-to-login').addEventListener('click', () => show('screen-login'));
+
+  // ---------- LOGIN ----------
+  document.getElementById('btn-login').addEventListener('click', async () => {
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    const phone = document.getElementById('login-phone').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (phone.length < 9 || !password) { errEl.textContent = 'Enter your phone number and password.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    try {
+      const data = await api('/driver/login.php', { method: 'POST', body: JSON.stringify({ phone, password }) });
+      localStorage.setItem(TOKEN_KEY, data.token);
+      renderHome(data.user);
+      show('screen-home');
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Log In';
+    }
+  });
+
+  // ---------- REGISTER ----------
+  document.getElementById('btn-register').addEventListener('click', async () => {
+    const errEl = document.getElementById('register-error');
+    errEl.style.display = 'none';
+    const fname = document.getElementById('reg-fname').value.trim();
+    const lname = document.getElementById('reg-lname').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const vehicleType = document.getElementById('reg-vehicle-type').value;
+    const plate = document.getElementById('reg-plate').value.trim().toUpperCase();
+    const route = document.getElementById('reg-route').value.trim();
+    const password = document.getElementById('reg-password').value;
+    if (!fname || !lname || phone.length < 9 || password.length < 6 || !plate) {
+      errEl.textContent = 'Fill in all required fields (password needs 6+ characters).';
+      errEl.style.display = 'block';
+      return;
+    }
+    const btn = document.getElementById('btn-register');
+    btn.disabled = true; btn.textContent = 'Creating account…';
+    try {
+      const data = await api('/driver/register.php', { method: 'POST', body: JSON.stringify({ fname, lname, phone, email, password, vehicleType, plate, route }) });
+      localStorage.setItem(TOKEN_KEY, data.token);
+      renderHome(data.user);
+      show('screen-home');
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Create Account';
+    }
+  });
+
+  // ---------- LOGOUT ----------
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    localStorage.removeItem(TOKEN_KEY);
+    document.getElementById('login-phone').value = '';
+    document.getElementById('login-password').value = '';
+    show('screen-login');
+  });
+
+  // ---------- INSTALL BUTTON: only show if NOT already installed ----------
+  let deferredPrompt;
+  const installBtn = document.getElementById('install-btn');
+  function isRunningInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  if (!isRunningInstalled()) {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'flex';
+    });
+  }
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === 'accepted') installBtn.style.display = 'none';
+      deferredPrompt = null;
+    }
+  });
+  window.addEventListener('appinstalled', () => { installBtn.style.display = 'none'; deferredPrompt = null; });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+  }
+</script>
+</body>
+</html>

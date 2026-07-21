@@ -1,17 +1,11 @@
 {
   "name": "Bravin Transport",
   "short_name": "Bravin",
-  "description": "Uganda's Premier Ride-Hailing Platform",
-  "start_url": "./index.html",
+  "start_url": "./rider.html",
   "display": "standalone",
-  "background_color": "#0d0d10",
-  "theme_color": "#27963c",
-  "orientation": "portrait-primary",
+  "background_color": "#0C0C0E",
+  "theme_color": "#27963C",
   "icons": [
-    {
-      "src": "./taxisify_app_logo.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "./taxisify_app_logo.png", "sizes": "512x512", "type": "image/png" }
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "cleanUrls": true,
+  "routes": [
+    {
+      "src": "/api/(.*)\\.php",
+      "status": 404,
+      "headers": {
+        "Content-Type": "text/plain"
+      }
+    }
+  ]
+}
