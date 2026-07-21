@@ -1,6 +1,11 @@
 // pricing-config.js
-// Uganda ride pricing — these are starter rates, edit freely to match your real pricing.
+// Uganda ride pricing & Google Maps Configuration.
 // All amounts in UGX (Ugandan Shilling).
+
+// Enter your Google Maps API Key here to enable Google Place Search & Google Directions.
+// If left as "YOUR_GOOGLE_MAPS_API_KEY" or empty, the app will automatically fall back
+// to free OpenStreetMap services (Nominatim + OSRM).
+const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
 
 const RIDE_TYPES = {
   boda: {
