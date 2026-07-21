@@ -307,6 +307,21 @@
         </div>
       </div>
 
+      <!-- Google Maps API Key Settings Card -->
+      <div style="background: var(--card-dark); border: 1px solid var(--border); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; margin-top:-8px; margin-bottom: 4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <span style="font-family:'Space Grotesk'; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Google Maps Integration</span>
+          <span id="key-status-badge" style="font-size:9.5px; font-family:'JetBrains Mono'; font-weight:700; color:var(--text-muted);">OSM ACTIVE (FREE)</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="password" id="input-api-key" placeholder="Paste Google Maps API Key (AIzaSy...)" style="flex:1; background:#08080A; border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:#fff; font-size:12.5px; outline:none; font-family:sans-serif;" oninput="saveApiKeyFromInput()">
+          <button onclick="clearApiKey()" style="background:#202024; color:var(--text-muted); border:1px solid var(--border); border-radius:10px; padding:0 14px; font-family:'Space Grotesk'; font-size:12px; font-weight:700; cursor:pointer;">Clear</button>
+        </div>
+        <p style="font-size:10px; color:var(--text-muted); line-height:1.4;">
+          Pasting your key enables Google's official Place Autocomplete & Directions on your device. The key is saved locally in your browser cache and is never uploaded or exposed.
+        </p>
+      </div>
+
       <div class="monitor-card">
         <div class="monitor-header">
           <div class="monitor-title">Live Simulator Database Logs</div>
@@ -404,6 +419,55 @@
         }
       } catch(e) {}
     }, 500);
+
+    // Google Maps API Key local storage hooks
+    function loadSavedApiKey() {
+      const savedKey = localStorage.getItem('google_maps_api_key') || '';
+      const input = document.getElementById('input-api-key');
+      const badge = document.getElementById('key-status-badge');
+      if (input) {
+        input.value = savedKey;
+      }
+      if (badge) {
+        if (savedKey) {
+          badge.textContent = '🟢 GOOGLE MAPS ACTIVE';
+          badge.style.color = '#30D158';
+        } else {
+          badge.textContent = 'OSM ACTIVE (FREE)';
+          badge.style.color = 'var(--text-muted)';
+        }
+      }
+    }
+
+    function saveApiKeyFromInput() {
+      const val = document.getElementById('input-api-key').value.trim();
+      if (val) {
+        localStorage.setItem('google_maps_api_key', val);
+      } else {
+        localStorage.removeItem('google_maps_api_key');
+      }
+      loadSavedApiKey();
+      
+      // Reload the iframe to apply the new API key settings instantly!
+      const iframe = document.getElementById('sim-iframe');
+      if (iframe) {
+        iframe.src = iframe.src;
+      }
+    }
+
+    function clearApiKey() {
+      localStorage.removeItem('google_maps_api_key');
+      loadSavedApiKey();
+      
+      // Reload iframe
+      const iframe = document.getElementById('sim-iframe');
+      if (iframe) {
+        iframe.src = iframe.src;
+      }
+    }
+
+    // Initialize key check on load
+    window.addEventListener('DOMContentLoaded', loadSavedApiKey);
   </script>
 </body>
 </html>
